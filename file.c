@@ -76,11 +76,7 @@ static long ntfs_compat_ioctl(struct file *filp, u32 cmd, unsigned long arg)
 /*
  * inode_operations::getattr
  */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-int ntfs_getattr(struct user_namespace *mnt_userns, const struct path *path,
-#else
 int ntfs_getattr(const struct path *path,
-#endif
 		 struct kstat *stat, u32 request_mask, u32 flags)
 {
 	struct inode *inode = d_inode(path->dentry);
@@ -94,11 +90,7 @@ int ntfs_getattr(const struct path *path,
 
 	stat->attributes_mask |= STATX_ATTR_COMPRESSED | STATX_ATTR_ENCRYPTED;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-	generic_fillattr(mnt_userns, inode, stat);
-#else
 	generic_fillattr(inode, stat);
-#endif
 
 	stat->result_mask |= STATX_BTIME;
 	stat->btime = ni->i_crtime;
@@ -622,11 +614,7 @@ out:
 /*
  * inode_operations::setattr
  */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-int ntfs3_setattr(struct user_namespace *mnt_userns, struct dentry *dentry,
-#else
 int ntfs3_setattr(struct dentry *dentry,
-#endif
 		  struct iattr *attr)
 {
 	struct super_block *sb = dentry->d_sb;
@@ -645,11 +633,7 @@ int ntfs3_setattr(struct dentry *dentry,
 		ia_valid = attr->ia_valid;
 	}
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-	err = setattr_prepare(mnt_userns, dentry, attr);
-#else
 	err = setattr_prepare(dentry, attr);
-#endif
 	if (err)
 		goto out;
 
@@ -674,18 +658,10 @@ int ntfs3_setattr(struct dentry *dentry,
 		ni->ni_flags |= NI_FLAG_UPDATE_PARENT;
 	}
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-	setattr_copy(mnt_userns, inode, attr);
-#else
 	setattr_copy(inode, attr);
-#endif
 
 	if (mode != inode->i_mode) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-		err = ntfs_acl_chmod(mnt_userns, inode);
-#else
 		err = ntfs_acl_chmod(inode);
-#endif
 		if (err)
 			goto out;
 

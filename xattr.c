@@ -473,11 +473,7 @@ static inline void ntfs_posix_acl_release(struct posix_acl *acl)
 		kfree(acl);
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-static struct posix_acl *ntfs_get_acl_ex(struct user_namespace *mnt_userns,
-#else
 static struct posix_acl *ntfs_get_acl_ex(
-#endif
 					 struct inode *inode, int type,
 					 int locked)
 {
@@ -513,11 +509,7 @@ static struct posix_acl *ntfs_get_acl_ex(
 
 	/* Translate extended attribute to acl */
 	if (err > 0) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-		acl = posix_acl_from_xattr(mnt_userns, buf, err);
-#else
 		acl = posix_acl_from_xattr(&init_user_ns, buf, err);
-#endif
 		if (!IS_ERR(acl))
 			set_cached_acl(inode, type, acl);
 	} else {
@@ -537,18 +529,10 @@ static struct posix_acl *ntfs_get_acl_ex(
 struct posix_acl *ntfs_get_acl(struct inode *inode, int type)
 {
 	/* TODO: init_user_ns? */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-	return ntfs_get_acl_ex(&init_user_ns, inode, type, 0);
-#else
 	return ntfs_get_acl_ex(inode, type, 0);
-#endif
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-static noinline int ntfs_set_acl_ex(struct user_namespace *mnt_userns,
-#else
 static noinline int ntfs_set_acl_ex(
-#endif
 				    struct inode *inode, struct posix_acl *acl,
 				    int type, int locked)
 {
@@ -606,11 +590,7 @@ static noinline int ntfs_set_acl_ex(
 	if (!value)
 		return -ENOMEM;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-	err = posix_acl_to_xattr(mnt_userns, acl, value, size);
-#else
 	err = posix_acl_to_xattr(&init_user_ns, acl, value, size);
-#endif
 	if (err)
 		goto out;
 
@@ -634,25 +614,13 @@ out:
  *
  * inode_operations::set_acl
  */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-int ntfs_set_acl(struct user_namespace *mnt_userns, struct inode *inode,
-#else
 int ntfs_set_acl(struct inode *inode,
-#endif
 		 struct posix_acl *acl, int type)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-	return ntfs_set_acl_ex(mnt_userns, inode, acl, type, 0);
-#else
 	return ntfs_set_acl_ex(inode, acl, type, 0);
-#endif
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-static int ntfs_xattr_get_acl(struct user_namespace *mnt_userns,
-#else
 static int ntfs_xattr_get_acl(
-#endif
 			      struct inode *inode, int type, void *buffer,
 			      size_t size)
 {
@@ -669,21 +637,13 @@ static int ntfs_xattr_get_acl(
 	if (!acl)
 		return -ENODATA;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-	err = posix_acl_to_xattr(mnt_userns, acl, buffer, size);
-#else
 	err = posix_acl_to_xattr(&init_user_ns, acl, buffer, size);
-#endif
 	ntfs_posix_acl_release(acl);
 
 	return err;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-static int ntfs_xattr_set_acl(struct user_namespace *mnt_userns,
-#else
 static int ntfs_xattr_set_acl(
-#endif
 			      struct inode *inode, int type, const void *value,
 			      size_t size)
 {
@@ -693,39 +653,23 @@ static int ntfs_xattr_set_acl(
 	if (!(inode->i_sb->s_flags & SB_POSIXACL))
 		return -EOPNOTSUPP;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-	if (!inode_owner_or_capable(mnt_userns, inode))
-#else
 	if (!inode_owner_or_capable(inode))
-#endif
 		return -EPERM;
 
 	if (!value)
 		return 0;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-	acl = posix_acl_from_xattr(mnt_userns, value, size);
-#else
 	acl = posix_acl_from_xattr(&init_user_ns, value, size);
-#endif
 	if (IS_ERR(acl))
 		return PTR_ERR(acl);
 
 	if (acl) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-		err = posix_acl_valid(mnt_userns, acl);
-#else
 		err = posix_acl_valid(&init_user_ns, acl);
-#endif
 		if (err)
 			goto release_and_out;
 	}
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-	err = ntfs_set_acl(mnt_userns, inode, acl, type);
-#else
 	err = ntfs_set_acl(inode, acl, type);
-#endif
 
 release_and_out:
 	ntfs_posix_acl_release(acl);
@@ -735,11 +679,7 @@ release_and_out:
 /*
  * Initialize the ACLs of a new inode. Called from ntfs_create_inode.
  */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-int ntfs_init_acl(struct user_namespace *mnt_userns, struct inode *inode,
-#else
 int ntfs_init_acl(struct inode *inode,
-#endif
 		  struct inode *dir)
 {
 	struct posix_acl *default_acl, *acl;
@@ -751,11 +691,7 @@ int ntfs_init_acl(struct inode *inode,
 	 */
 	inode->i_default_acl = NULL;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-	default_acl = ntfs_get_acl_ex(mnt_userns, dir, ACL_TYPE_DEFAULT, 1);
-#else
 	default_acl = ntfs_get_acl_ex(dir, ACL_TYPE_DEFAULT, 1);
-#endif
 
 	if (!default_acl || default_acl == ERR_PTR(-EOPNOTSUPP)) {
 		inode->i_mode &= ~current_umask();
@@ -783,21 +719,13 @@ int ntfs_init_acl(struct inode *inode,
 	}
 
 	if (default_acl)
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-		err = ntfs_set_acl_ex(mnt_userns, inode, default_acl,
-#else
 		err = ntfs_set_acl_ex(inode, default_acl,
-#endif
 				      ACL_TYPE_DEFAULT, 1);
 
 	if (!acl)
 		inode->i_acl = NULL;
 	else if (!err)
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-		err = ntfs_set_acl_ex(mnt_userns, inode, acl, ACL_TYPE_ACCESS,
-#else
 		err = ntfs_set_acl_ex(inode, acl, ACL_TYPE_ACCESS,
-#endif
 				      1);
 
 	posix_acl_release(acl);
@@ -814,11 +742,7 @@ out:
  *
  * helper for 'ntfs3_setattr'
  */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-int ntfs_acl_chmod(struct user_namespace *mnt_userns, struct inode *inode)
-#else
 int ntfs_acl_chmod(struct inode *inode)
-#endif
 {
 	struct super_block *sb = inode->i_sb;
 
@@ -828,11 +752,7 @@ int ntfs_acl_chmod(struct inode *inode)
 	if (S_ISLNK(inode->i_mode))
 		return -EOPNOTSUPP;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-	return posix_acl_chmod(mnt_userns, inode, inode->i_mode);
-#else
 	return posix_acl_chmod(inode, inode->i_mode);
-#endif
 }
 
 /*
@@ -840,11 +760,7 @@ int ntfs_acl_chmod(struct inode *inode)
  *
  * inode_operations::permission
  */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-int ntfs_permission(struct user_namespace *mnt_userns, struct inode *inode,
-#else
 int ntfs_permission(struct inode *inode,
-#endif
 		    int mask)
 {
 	if (ntfs_sb(inode->i_sb)->options.no_acs_rules) {
@@ -852,11 +768,7 @@ int ntfs_permission(struct inode *inode,
 		return 0;
 	}
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-	return generic_permission(mnt_userns, inode, mask);
-#else
 	return generic_permission(inode, mask);
-#endif
 }
 
 /*
@@ -970,11 +882,7 @@ static int ntfs_getxattr(const struct xattr_handler *handler, struct dentry *de,
 		     sizeof(XATTR_NAME_POSIX_ACL_DEFAULT)))) {
 		/* TODO: init_user_ns? */
 		err = ntfs_xattr_get_acl(
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-			&init_user_ns, inode,
-#else
 			inode,
-#endif
 			name_len == sizeof(XATTR_NAME_POSIX_ACL_ACCESS) - 1
 				? ACL_TYPE_ACCESS
 				: ACL_TYPE_DEFAULT,
@@ -995,9 +903,6 @@ out:
  * inode_operations::setxattr
  */
 static noinline int ntfs_setxattr(const struct xattr_handler *handler,
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-				  struct user_namespace *mnt_userns,
-#endif
 				  struct dentry *de, struct inode *inode,
 				  const char *name, const void *value,
 				  size_t size, int flags)
@@ -1107,11 +1012,7 @@ set_new_fa:
 		     sizeof(XATTR_NAME_POSIX_ACL_DEFAULT)))) {
 		/* TODO: init_user_ns? */
 		err = ntfs_xattr_set_acl(
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)
-			&init_user_ns, inode,
-#else
 			inode,
-#endif
 			name_len == sizeof(XATTR_NAME_POSIX_ACL_ACCESS) - 1
 				? ACL_TYPE_ACCESS
 				: ACL_TYPE_DEFAULT,
